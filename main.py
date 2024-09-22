@@ -30,9 +30,9 @@ help_command = commands.DefaultHelpCommand(no_category="Here, get some help from
 
 intents = discord.Intents.all()
 
-client = commands.Bot(command_prefix=['jeff'], case_insensitive=True, intents=intents, help_command=help_command)
+client = commands.Bot(command_prefix=['jeff '], case_insensitive=True, intents=intents, help_command=help_command)
 
-wolfram = wolframalpha.Client(os.getenv("WOLFRAM_APP_ID"))
+wolfram_client = wolframalpha.Client(os.getenv("WOLFRAM_APP_ID"))
 
 montreal_tz = pytz.timezone('America/Montreal')
 
@@ -98,20 +98,24 @@ async def chess(ctx, clim=600, cinc=3, gametype="STANDARD"):
       await ctx.send(f'Error: {str(e)}')
 
 
-@client.command(brief="Math Solver.", aliases=['m'])      # Wolfram Alpha
+@client.command(brief="Math Solver.", aliases=['m'])  
 async def math(ctx, *, query):
-    res = wolfram.query(query)
     try:
-        result = next(res.results).text
-    
-        embed = discord.Embed(title=f"Query: {query}", color=discord.Color.random())
-    
-        embed.add_field(name="Result", value=result, inline=False)
+        res = await wolfram_client.query(query)
 
-        await ctx.send(embed=embed)
-      
-    except StopIteration:
-        await ctx.send("Error.")
+        result = None
+        for pod in res.pods:
+            if pod.primary:
+                result = pod.subpods[0].plaintext
+                break
+        if result:
+            embed = discord.Embed(title=f"Query: {query}", color=discord.Color.random())
+            embed.add_field(name="Result", value=result, inline=False)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("No results found.")
+    except Exception as e:
+        await ctx.send(f"An error occurred: {str(e)}")
 
                                                               # Translate
 @client.command(brief="Google Translate.", description="""    
@@ -304,4 +308,4 @@ async def on_voice_state_update(member, before, after):
   
 
 alive()
-asyncio.run(client.start(TOKEN))
+client.run(TOKEN)
